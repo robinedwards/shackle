@@ -1,0 +1,5 @@
+*.swp
+*.o
+*.swo
+a.out
+shackle
