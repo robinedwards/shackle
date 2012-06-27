@@ -1,7 +1,7 @@
-CFLAGS=-c -Werror -Wextra -Wall -ggdb3
+CFLAGS=-c -Wextra -Wall -ggdb3
 CC=gcc
-LDFLAGS=
-SOURCES=die.c listen_server.c event_loop.c main.c
+LDFLAGS=-levent
+SOURCES=die.c event_server.c message_handler.c job.c main.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=shackle
 
