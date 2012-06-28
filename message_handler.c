@@ -1,4 +1,4 @@
-#include "job.h"
+#include "job_manager.h"
 #include "die.h"
 #include <string.h>
 #include <stdlib.h>
@@ -10,9 +10,11 @@ char * message_handler(char * request, int n) {
 
     char * cmd = strndup(request, n-1);
     Job *j = Job_create(job_id++, cmd, 99);
-    Job_print(j);
 
-    if((fd =  Job_launch(j)))
+    if (JobManager_add_job(j) == 0)
+        return "QUEUE FULL";
+
+    if ((fd =  Job_launch(j)))
         return "OK";
     else
         return "FAIL";

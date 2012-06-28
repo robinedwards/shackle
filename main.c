@@ -1,9 +1,11 @@
 #include "event_server.h"
-#include "job.h"
+#include "job_manager.h"
 
 int main(void) {
-    Job_setup_child_handler();
+    JobManager_create(10);
     EventServer* s = EventServer_create(9090);
+    printf("Listening on port 9090");
     EventServer_run(s);
+    JobManager_destroy();
     return 0;
 }

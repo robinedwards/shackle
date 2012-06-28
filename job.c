@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include <signal.h>
 #include "die.h"
 #include "job.h"
 
@@ -43,22 +42,4 @@ int Job_launch(Job *job) {
     }
 
     return 0;
-}
-
-void Job_child_handler(int sig) {
-    pid_t p;
-    int status;
-
-    while ((p=waitpid(-1, &status, WNOHANG)) != -1) {
-        printf("pid %d just exited with status %d\n", p, status);
-    }
-}
-
-
-void Job_setup_child_handler(void) {
-    struct sigaction sa;
-
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = Job_child_handler;
-    sigaction(SIGCHLD, &sa, NULL);
 }
