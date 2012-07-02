@@ -8,14 +8,34 @@
 
 JobManager * manager;
 
+static int JobManager_remove_job(int pid) {
+    int i = 0;
+    for (; i <= manager->queue_size; i++) {
+        if (manager->queue[i] == NULL) continue;
+
+        if (manager->queue[i]->pid == pid) {
+            printf("Found child %d in slot %d, job %d complete\n",
+                    pid, i, manager->queue[i]->id);
+
+            Job_destroy(manager->queue[i]);
+            manager->queue[i] = NULL;
+            return 1;
+        }
+
+    }
+
+    return 0;
+}
+
 static void JobManager_child_exit_handler(int sig) {
     pid_t p;
     int status;
 
-    printf("recievied signal %d\n", sig);
-
     while ((p=waitpid(-1, &status, WNOHANG)) != -1) {
         printf("pid %d just exited with status %d\n", p, status);
+        if (!JobManager_remove_job(p)) {
+            printf("Couldn't find corresponding job in the queue?\n");
+        }
     }
 }
 
@@ -48,23 +68,26 @@ void JobManager_destroy() {
     free(manager);
 }
 
+
 int JobManager_add_job(Job *job) {
     Job **slot = NULL;
 
     int i = 0;
 
-    for (; i < manager->queue_size; i++) {
-        if (manager->queue[i] == NULL)
+    for (; i <= manager->queue_size; i++) {
+        if (manager->queue[i] == NULL) {
             slot = &(manager->queue[i]);
+            printf("found free slot %d for job %d > %p\n", i, job->id, manager->queue);
+            break;
+        }
     }
 
     if (slot == NULL) {
-        printf("No free slots for job %d", job->id);
+        printf("No free slots for job %d\n", job->id);
         return 0;
     }
 
     *slot = job;
-    printf("Assigned job %d to slot %d\n", job->id, i);
 
     return 1;
 }
