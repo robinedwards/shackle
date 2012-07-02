@@ -7,6 +7,9 @@ typedef struct {
     int pid;
     int exit_code;
     int time_limit;
+    int stdin_fd;
+    int stderr_fd;
+    int stdout_fd;
 } Job;
 
 Job *Job_create(int id, char *command, int time_limit);
