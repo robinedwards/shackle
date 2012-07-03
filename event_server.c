@@ -14,6 +14,20 @@
 #include "die.h"
 #include "message_handler.h"
 
+
+static void EventServer_write_callback(struct bufferevent *bev, void *arg) {
+    bufferevent_free(bev);
+}
+
+static void EventServer_error_callback(struct bufferevent *bev, short error, void *ctx) {
+    if (error & BEV_EVENT_ERROR) {
+        die("An error occured %dn", error);
+    } else if (error & BEV_EVENT_TIMEOUT) {
+        die("Unhandled timeout event");
+    }
+    bufferevent_free(bev);
+}
+
 static void EventServer_read_callback(struct bufferevent *bev, void *arg) {
     EventServer *server = arg;
     struct evbuffer *input, *output;
@@ -26,25 +40,8 @@ static void EventServer_read_callback(struct bufferevent *bev, void *arg) {
         char *response = message_handler(request, n);
         free(request);
         evbuffer_add(output, response, strlen(response)+1);
+        bufferevent_setcb(bev, EventServer_read_callback, EventServer_write_callback, EventServer_error_callback, server);
     }
-    server->free_socket = 1;
-}
-
-static void EventServer_write_callback(struct bufferevent *bev, void *arg) {
-    EventServer *server = arg;
-    if (server->free_socket) {
-        bufferevent_free(bev);
-        server->free_socket = 0;
-    }
-}
-
-static void EventServer_error_callback(struct bufferevent *bev, short error, void *ctx) {
-    if (error & BEV_EVENT_ERROR) {
-        die("An error occured %dn", error);
-    } else if (error & BEV_EVENT_TIMEOUT) {
-        die("Unhandled timeout event");
-    }
-    bufferevent_free(bev);
 }
 
 static void ListenServer_accept(evutil_socket_t listener, short event, void *arg) {
@@ -61,7 +58,7 @@ static void ListenServer_accept(evutil_socket_t listener, short event, void *arg
         evutil_make_socket_nonblocking(fd);
         bev = bufferevent_socket_new(server->base, fd, BEV_OPT_CLOSE_ON_FREE);
         bufferevent_setwatermark(bev, EV_WRITE, 1, 9999);
-        bufferevent_setcb(bev, EventServer_read_callback, EventServer_write_callback, EventServer_error_callback, server);
+        bufferevent_setcb(bev, EventServer_read_callback, NULL, EventServer_error_callback, server);
         bufferevent_enable(bev, EV_READ|EV_WRITE);
     }
 }

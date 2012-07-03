@@ -2,7 +2,6 @@
 
 typedef struct {
     int port;
-    int free_socket;
     evutil_socket_t listener;
     struct sockaddr_in sin;
     struct event_base *base;
