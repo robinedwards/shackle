@@ -3,19 +3,20 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 char * message_handler(char * request, int n) {
     static int job_id = 1;
-    int fd;
 
     char * cmd = strndup(request, n-1);
-    Job *j = Job_create(job_id++, cmd, 99);
+    Job *job = Job_create(job_id++, cmd, 99);
 
-    if (JobManager_add_job(j) == 0)
-        return "QUEUE FULL";
+    if (JobManager_add_job(job) == 0)
+        return "QUEUE FULL\n";
 
-    if ((fd =  Job_launch(j)))
-        return "OK";
-    else
-        return "FAIL";
+    if (Job_launch(job)) {
+           return "OK\n";
+    } else {
+        return "FAIL\n";
+    }
 }
