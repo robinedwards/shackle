@@ -1,3 +1,4 @@
+#include <event2/event.h>
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -23,6 +24,8 @@ Job *Job_create(int id, char *command, int time_limit) {
 void Job_destroy(Job *job) {
     assert(job != NULL);
     free(job->command);
+    event_free(job->stderr_ev);
+    event_free(job->stdout_ev);
     if(job->stdout_fd > -1)
         close(job->stdout_fd);
     if(job->stderr_fd > -1)
@@ -39,7 +42,7 @@ void Job_print(Job *job) {
 int Job_launch(Job *job) {
     assert (job != NULL);
 
-    // fd juggling adapted from here: http://jineshkj.wordpress.com/2006/12/22/how-to-capture-stdin-stdout-and-stderr-of-child-program/
+    // child output piping adapted from here: http://tinyurl.com/yzl5qvu
 
     int child_stdout_fd[2], child_stderr_fd[2];
 
@@ -61,13 +64,18 @@ int Job_launch(Job *job) {
         if(dup2(child_stderr_fd[1], STDERR_FILENO) == -1)
             die("Couldn't copy fd");
 
+        setvbuf(stdout, NULL, _IONBF, 0);
+        setvbuf(stderr, NULL, _IONBF, 0);
+
         close(child_stdout_fd[0]);
         close(child_stderr_fd[0]);
         close(child_stdout_fd[1]);
         close(child_stderr_fd[1]);
 
-        printf("Child executing %s\n", job->command);
-        exit(execv(job->command, 0));
+        printf("Child executing '%s'\n", job->command);
+        int r = execv(job->command, 0);
+        printf("Child finished with code %d\n", r);
+        exit(r);
     }
     else if (pid > 0) { // parent
         job->pid = pid;
@@ -86,3 +94,35 @@ int Job_launch(Job *job) {
 
     return 1;
 }
+
+static void Job_read_pipe(int fd, short flags, void *data) {
+    assert(data != NULL);
+    Job * job = data;
+    char buf[1024];
+    int ret = read(fd, buf, 1024);
+    if (ret == -1)
+        die ("Couldn't read pipe %d", fd);
+    else if (ret > 0) {
+        buf[ret] = 0;
+        printf("%d > %s", job->id, buf);
+    }
+}
+
+int Job_setup_pipes(Job *job, struct event_base *base) {
+    assert(job != NULL);
+    assert(base != NULL);
+    job->stderr_ev = event_new(base, job->stderr_fd,
+            EV_READ|EV_PERSIST, Job_read_pipe, (void*) job);
+
+    assert(job->stderr_ev != NULL);
+    event_add(job->stderr_ev, NULL);
+
+    job->stdout_ev = event_new(base, job->stdout_fd,
+            EV_READ|EV_PERSIST, Job_read_pipe, (void*) job);
+
+    assert(job->stdout_ev != NULL);
+    event_add(job->stdout_ev, NULL);
+
+    return 1;
+}
+

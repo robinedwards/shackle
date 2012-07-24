@@ -37,7 +37,7 @@ static void EventServer_read_callback(struct bufferevent *bev, void *arg) {
     output = bufferevent_get_output(bev);
 
     while ((request = evbuffer_readln(input, &n, EVBUFFER_EOL_LF))) {
-        char *response = message_handler(request, n);
+        char *response = message_handler(request, n, server->base);
         free(request);
         evbuffer_add(output, response, strlen(response)+1);
         bufferevent_setcb(bev, EventServer_read_callback, EventServer_write_callback, EventServer_error_callback, server);
