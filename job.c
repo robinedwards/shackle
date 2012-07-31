@@ -12,7 +12,18 @@ Job *Job_create(int id, char *command, int time_limit) {
     assert(command != NULL);
     Job *job = malloc(sizeof(Job));
     assert(job != NULL);
+
+    // parse command arguments
     job->command = strdup(command);
+    job->path = strtok(command, " ");
+    char *p = job->path;
+    job->argc = 0;
+    while (p != NULL) {
+        job->argv[job->argc] = p;
+        job->argc++;
+        p = strtok(NULL, " ");
+    }
+
     job->id = id;
     job->time_limit = time_limit;
     job->pid = -1;
@@ -75,8 +86,11 @@ int Job_launch(Job *job) {
         close(child_stderr_fd[1]);
 
         printf("Child executing '%s'\n", job->command);
-        int r = execv(job->command, 0);
-        printf("Child finished with code %d\n", r);
+        int r = execv(job->path, job->argv);
+        if (r == -1)
+            perror("Executing command");
+        else
+            printf("Child finished with code %d\n", r);
         exit(r);
     }
     else if (pid > 0) { // parent

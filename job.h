@@ -2,6 +2,9 @@
 
 typedef struct {
     char *command;
+    char *path;
+    char *argv[256];
+    int argc;
     int id;
     int pid;
     int exit_code;
