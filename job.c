@@ -24,8 +24,10 @@ Job *Job_create(int id, char *command, int time_limit) {
 void Job_destroy(Job *job) {
     assert(job != NULL);
     free(job->command);
-    event_free(job->stderr_ev);
-    event_free(job->stdout_ev);
+    if(job->stderr_ev != NULL)
+        event_free(job->stderr_ev);
+    if(job->stdout_ev != NULL)
+        event_free(job->stdout_ev);
     if(job->stdout_fd > -1)
         close(job->stdout_fd);
     if(job->stderr_fd > -1)
