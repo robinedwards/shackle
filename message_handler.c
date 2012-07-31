@@ -12,6 +12,9 @@ char * message_handler(char * request, int n, struct event_base *event_base) {
     char * cmd = strndup(request, n);
     Job *job = Job_create(job_id++, cmd, 99);
 
+    if (job == NULL)
+        return "FAILED TO CREATE JOB\n";
+
     if (JobManager_add_job(job) == 0)
         return "QUEUE FULL\n";
 
