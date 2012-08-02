@@ -9,8 +9,7 @@
 JobManager * manager;
 
 static int JobManager_remove_job(int pid) {
-    int i = 0;
-    for (; i <= manager->queue_size; i++) {
+    for (int i = 0; i < manager->queue_size; i++) {
         if (manager->queue[i] == NULL) continue;
 
         if (manager->queue[i]->pid == pid) {
