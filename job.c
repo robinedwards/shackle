@@ -67,9 +67,6 @@ int Job_launch(Job *job) {
 
     int pid = fork();
     if (pid == 0) { // child
-        close(STDIN_FILENO);
-        close(STDOUT_FILENO);
-        close(STDERR_FILENO);
 
         // set write end of pipes as stdout & stderr
         if(dup2(child_stdout_fd[1], STDOUT_FILENO) == -1)
@@ -77,13 +74,12 @@ int Job_launch(Job *job) {
         if(dup2(child_stderr_fd[1], STDERR_FILENO) == -1)
             die("Couldn't copy fd");
 
+        // close all fd appart from stdout + stderr
+        for (int i = getdtablesize(); i >= 3; --i) close(i);
+        close(STDIN_FILENO);
+
         setvbuf(stdout, NULL, _IONBF, 0);
         setvbuf(stderr, NULL, _IONBF, 0);
-
-        close(child_stdout_fd[0]);
-        close(child_stderr_fd[0]);
-        close(child_stdout_fd[1]);
-        close(child_stderr_fd[1]);
 
         printf("Child executing '%s'\n", job->command);
         int r = execv(job->path, job->argv);
@@ -102,13 +98,12 @@ int Job_launch(Job *job) {
         job->stdout_fd = child_stdout_fd[0];
         job->stderr_fd = child_stderr_fd[0];
         printf("Job %d launched with pid %d\n", job->id, job->pid);
+        return 1;
     }
     else {
         perror("Unable to fork!!");
         return 0;
     }
-
-    return 1;
 }
 
 static void Job_read_pipe(int fd, short flags, void *data) {
