@@ -1,7 +1,7 @@
-#include <netinet/in.h>
-#include <sys/socket.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <event2/event.h>
+#include <event2/listener.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
 #include <assert.h>
@@ -44,27 +44,27 @@ static void EventServer_read_callback(struct bufferevent *bev, void *arg) {
     }
 }
 
-static void ListenServer_accept(evutil_socket_t listener, short event, void *arg) {
-    EventServer *server = arg;
-    struct sockaddr_storage ss;
-    socklen_t slen = sizeof(ss);
-    int fd = accept(listener, (struct sockaddr*)&ss, &slen);
-    if (fd < 0) {
-        die("accept failed");
-    } else if (fd > FD_SETSIZE) {
-        close(fd);
-    } else {
-        struct bufferevent *bev;
-        evutil_make_socket_nonblocking(fd);
-        bev = bufferevent_socket_new(server->base, fd, BEV_OPT_CLOSE_ON_FREE);
-        bufferevent_setwatermark(bev, EV_WRITE, 1, 9999);
-        bufferevent_setcb(bev, EventServer_read_callback, NULL, EventServer_error_callback, server);
-        bufferevent_enable(bev, EV_READ|EV_WRITE);
-    }
+
+static void EventServer_accept_callback(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *address, int socklen, void *ctx) {
+    EventServer * server = ctx;
+    /* We got a new connection! Set up a bufferevent for it. */
+    struct event_base *base = evconnlistener_get_base(listener);
+    struct bufferevent *bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
+    bufferevent_setwatermark(bev, EV_WRITE, 1, 9999);
+    bufferevent_setcb(bev, EventServer_read_callback, NULL, EventServer_error_callback, server);
+    bufferevent_enable(bev, EV_READ|EV_WRITE);
+}
+
+static void EventServer_accept_error_callback(struct evconnlistener *listener, void *ctx) {
+    struct event_base *base = evconnlistener_get_base(listener);
+    int err = EVUTIL_SOCKET_ERROR();
+    fprintf(stderr, "Got an error %d (%s) on the listener. "
+            "Shutting down.\n", err, evutil_socket_error_to_string(err));
+    event_base_loopexit(base, NULL);
 }
 
 EventServer * EventServer_create(int port) {
-    assert(port > 0);
+    assert(port > 0 && port < 65537);
     EventServer * server = malloc(sizeof(EventServer));
     assert(server != NULL);
 
@@ -74,36 +74,21 @@ EventServer * EventServer_create(int port) {
     if (!server->base)
         return NULL;
 
-    server->sin.sin_family = AF_INET;
-    server->sin.sin_addr.s_addr = 0;
+    memset(&(server->sin), 0, sizeof(struct sockaddr_in));
+    server->sin.sin_family = AF_INET; // INET address
+    server->sin.sin_addr.s_addr = 0; // listen on 0.0.0.0
     server->sin.sin_port = htons(server->port);
 
-    server->listener = socket(AF_INET, SOCK_STREAM, 0);
-    evutil_make_socket_nonblocking(server->listener);
-    int one = 1;
-    setsockopt(server->listener, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+    server->listener = evconnlistener_new_bind(server->base, EventServer_accept_callback, server,
+            LEV_OPT_CLOSE_ON_FREE|LEV_OPT_REUSEABLE, -1,
+            (struct sockaddr*)&(server->sin), sizeof(struct sockaddr_in));
+    if (!server->listener)
+        die("Couldn't create listener");
+    evconnlistener_set_error_cb(server->listener, EventServer_accept_error_callback);
     return server;
 }
 
 void EventServer_run(EventServer *server) {
-    struct event *listener_event;
-    assert(server != NULL);
-
-    if (bind(server->listener, (struct sockaddr*)&server->sin, sizeof(server->sin)) < 0) {
-        perror("Failed to bind");
-        return;
-    }
-
-    if (listen(server->listener, 16) < 0) {
-        perror("Failed to listen");
-        return;
-    }
-
-    listener_event = event_new(server->base, server->listener,
-            EV_READ|EV_PERSIST, ListenServer_accept, (void*)server);
-
-    assert(listener_event != NULL);
-    event_add(listener_event, NULL);
     event_base_dispatch(server->base);
 }
 
