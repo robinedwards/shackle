@@ -8,10 +8,14 @@
 #include "die.h"
 #include "job.h"
 
-Job *Job_create(int id, char *command, int time_limit) {
+Job *Job_create(int id, char *command, int time_limit, struct event_base *eb) {
     assert(command != NULL);
     Job *job = malloc(sizeof(Job));
     assert(job != NULL);
+    assert(eb != NULL);
+    job->event_base = eb;
+    job->stderr_output = NULL;
+    job->stdout_output = NULL;
 
     // parse command arguments
     job->command = strdup(command);
@@ -35,14 +39,14 @@ Job *Job_create(int id, char *command, int time_limit) {
 void Job_destroy(Job *job) {
     assert(job != NULL);
     free(job->command);
-    if(job->stderr_ev != NULL)
-        event_free(job->stderr_ev);
-    if(job->stdout_ev != NULL)
-        event_free(job->stdout_ev);
     if(job->stdout_fd > -1)
         close(job->stdout_fd);
     if(job->stderr_fd > -1)
         close(job->stderr_fd);
+    if(job->stdout_output != NULL)
+        free(job->stdout_output);
+    if(job->stderr_output != NULL)
+        free(job->stderr_output);
     free(job);
 }
 
@@ -50,6 +54,12 @@ void Job_print(Job *job) {
     assert(job != NULL);
     printf("\nJob %d: %s time limit: %d.\n", job->id,
             job->command, job->time_limit);
+
+    if(job->stdout_output != NULL)
+        puts(job->stdout_output);
+
+    if(job->stderr_output != NULL)
+        puts(job->stderr_output);
 }
 
 int Job_launch(Job *job) {
@@ -106,33 +116,67 @@ int Job_launch(Job *job) {
     }
 }
 
-static void Job_read_pipe(int fd, short flags, void *data) {
+static void Job_grow_and_append(char **p, char *data, int size) {
+    data[size] = 0;
+    // alloc or expand
+    if (*p == NULL) {
+        *p = malloc(sizeof(char) * 1024 * 1024);
+        **p = 0;
+    } /* TODO else {
+        printf("old %lu new %lu\n", sizeof(*p), sizeof(*p) + sizeof(char) * size);
+        *p = realloc(*p,  sizeof(*p) + sizeof(char) * size);
+    } */
+
+    *p = strcat(*p, data);
+}
+
+static void Job_read_stdout_pipe(int fd, short flags, void *data) {
     assert(data != NULL);
     Job * job = data;
+
     char buf[1024];
     int ret = read(fd, buf, 1024);
     if (ret == -1)
-        perror("Couldn't read pipe");
+        perror("Couldn't read stdout pipe");
     else if (ret > 0) {
         buf[ret] = 0;
-        printf("%d > %s", job->id, buf);
+        Job_grow_and_append(&(job->stdout_output), buf, ret);
+        struct event * stdout_ev = event_new(job->event_base, fd, EV_READ, Job_read_stdout_pipe, (void*) job);
+        event_add(stdout_ev, NULL);
     }
+    else if (ret == 0)
+        close(fd);
 }
 
-int Job_setup_pipes(Job *job, struct event_base *base) {
+static void Job_read_stderr_pipe(int fd, short flags, void *data) {
+    assert(data != NULL);
+    Job * job = data;
+
+    char buf[1024];
+    int ret = read(fd, buf, 1024);
+    if (ret == -1)
+        perror("Couldn't read stderr pipe");
+    else if (ret > 0) {
+        buf[ret] = 0;
+        Job_grow_and_append(&(job->stderr_output), buf, ret);
+        struct event * stderr_ev = event_new(job->event_base, fd, EV_READ, Job_read_stderr_pipe, (void*) job);
+        event_add(stderr_ev, NULL);
+    }
+    else if (ret == 0)
+        close(fd);
+}
+
+int Job_setup_pipes(Job *job) {
     assert(job != NULL);
-    assert(base != NULL);
-    job->stderr_ev = event_new(base, job->stderr_fd,
-            EV_READ|EV_PERSIST, Job_read_pipe, (void*) job);
+    struct event * stderr_ev = event_new(job->event_base, job->stderr_fd,
+            EV_READ, Job_read_stderr_pipe, (void*) job);
 
-    assert(job->stderr_ev != NULL);
-    event_add(job->stderr_ev, NULL);
 
-    job->stdout_ev = event_new(base, job->stdout_fd,
-            EV_READ|EV_PERSIST, Job_read_pipe, (void*) job);
+    struct event * stdout_ev = event_new(job->event_base, job->stdout_fd,
+            EV_READ, Job_read_stdout_pipe, (void*) job);
 
-    assert(job->stdout_ev != NULL);
-    event_add(job->stdout_ev, NULL);
+    event_add(stdout_ev, NULL);
+    event_add(stderr_ev, NULL);
 
     return 1;
 }
