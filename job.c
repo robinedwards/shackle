@@ -112,7 +112,7 @@ static void Job_read_pipe(int fd, short flags, void *data) {
     char buf[1024];
     int ret = read(fd, buf, 1024);
     if (ret == -1)
-        die ("Couldn't read pipe %d", fd);
+        perror("Couldn't read pipe");
     else if (ret > 0) {
         buf[ret] = 0;
         printf("%d > %s", job->id, buf);
