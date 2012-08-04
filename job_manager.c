@@ -8,14 +8,15 @@
 
 JobManager * manager;
 
-static int JobManager_remove_job(int pid) {
+static int JobManager_remove_job(int pid, int exit_code) {
     for (int i = 0; i < manager->queue_size; i++) {
         if (manager->queue[i] == NULL) continue;
 
         if (manager->queue[i]->pid == pid) {
             printf("Found child %d in slot %d, job %d complete\n",
                     pid, i, manager->queue[i]->id);
-
+            manager->queue[i]->exit_code = exit_code;
+            Job_print(manager->queue[i]);
             Job_destroy(manager->queue[i]);
             manager->queue[i] = NULL;
             return 1;
@@ -32,7 +33,7 @@ static void JobManager_child_exit_handler(int sig) {
 
     while ((p=waitpid(-1, &status, WNOHANG)) > 0) {
         printf("pid %d just exited with status %d\n", p, status);
-        if (!JobManager_remove_job(p)) {
+        if (!JobManager_remove_job(p, status)) {
             printf("Couldn't find corresponding job in the queue?\n");
         }
     }
