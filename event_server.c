@@ -40,7 +40,8 @@ static void EventServer_read_callback(struct bufferevent *bev, void *arg) {
     output = bufferevent_get_output(bev);
 
     while ((request = evbuffer_readln(input, &n, EVBUFFER_EOL_LF))) {
-        char *response = message_handler(request, n, event_base);
+        char *response = malloc(sizeof(char)*256);
+        message_handler(request, response, n, event_base);
         free(request);
         evbuffer_add(output, response, strlen(response)+1);
         bufferevent_setcb(bev, EventServer_read_callback, EventServer_write_callback, EventServer_error_callback, server);
@@ -50,7 +51,6 @@ static void EventServer_read_callback(struct bufferevent *bev, void *arg) {
 
 static void EventServer_accept_callback(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *address, int socklen, void *ctx) {
     EventServer * server = ctx;
-    /* We got a new connection! Set up a bufferevent for it. */
     struct bufferevent *bev = bufferevent_socket_new(event_base, fd, BEV_OPT_CLOSE_ON_FREE);
     bufferevent_setwatermark(bev, EV_WRITE, 1, 9999);
     bufferevent_setcb(bev, EventServer_read_callback, NULL, EventServer_error_callback, server);
