@@ -8,12 +8,12 @@
 #include "die.h"
 #include "job.h"
 
-Job *Job_create(int id, char *command, int time_limit, struct event_base *eb) {
+extern struct event_base *event_base;
+
+Job *Job_create(int id, char *command, int time_limit) {
     assert(command != NULL);
     Job *job = malloc(sizeof(Job));
     assert(job != NULL);
-    assert(eb != NULL);
-    job->event_base = eb;
     job->stderr_output = NULL;
     job->stdout_output = NULL;
 
@@ -141,7 +141,7 @@ static void Job_read_stdout_pipe(int fd, short flags, void *data) {
     else if (ret > 0) {
         buf[ret] = 0;
         Job_grow_and_append(&(job->stdout_output), buf, ret);
-        struct event * stdout_ev = event_new(job->event_base, fd, EV_READ, Job_read_stdout_pipe, (void*) job);
+        struct event * stdout_ev = event_new(event_base, fd, EV_READ, Job_read_stdout_pipe, (void*) job);
         event_add(stdout_ev, NULL);
     }
     else if (ret == 0)
@@ -159,7 +159,7 @@ static void Job_read_stderr_pipe(int fd, short flags, void *data) {
     else if (ret > 0) {
         buf[ret] = 0;
         Job_grow_and_append(&(job->stderr_output), buf, ret);
-        struct event * stderr_ev = event_new(job->event_base, fd, EV_READ, Job_read_stderr_pipe, (void*) job);
+        struct event * stderr_ev = event_new(event_base, fd, EV_READ, Job_read_stderr_pipe, (void*) job);
         event_add(stderr_ev, NULL);
     }
     else if (ret == 0)
@@ -168,11 +168,11 @@ static void Job_read_stderr_pipe(int fd, short flags, void *data) {
 
 int Job_setup_pipes(Job *job) {
     assert(job != NULL);
-    struct event * stderr_ev = event_new(job->event_base, job->stderr_fd,
+    struct event * stderr_ev = event_new(event_base, job->stderr_fd,
             EV_READ, Job_read_stderr_pipe, (void*) job);
 
 
-    struct event * stdout_ev = event_new(job->event_base, job->stdout_fd,
+    struct event * stdout_ev = event_new(event_base, job->stdout_fd,
             EV_READ, Job_read_stdout_pipe, (void*) job);
 
     event_add(stdout_ev, NULL);

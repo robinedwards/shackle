@@ -6,12 +6,11 @@
 #include <stdio.h>
 #include <unistd.h>
 
-char * message_handler(char * request, int n, struct event_base *event_base) {
+char * message_handler(char * request, int n) {
     static int job_id = 1;
 
     char * cmd = strndup(request, n);
-    Job *job = Job_create(job_id++, cmd, 99, event_base);
-
+    Job *job = Job_create(job_id++, cmd, 99);
     if (job == NULL)
         return "FAILED TO CREATE JOB\n";
 

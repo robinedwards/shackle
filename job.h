@@ -13,10 +13,9 @@ typedef struct {
     int stdout_fd;
     char *stderr_output;
     char *stdout_output;
-    struct event_base *event_base;
 } Job;
 
-Job *Job_create(int id, char *command, int time_limit, struct event_base *base);
+Job *Job_create(int id, char *command, int time_limit);
 void Job_destroy(Job *job);
 void Job_setup_child_handler(void);
 void Job_print(Job *job);
