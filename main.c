@@ -1,12 +1,15 @@
 #include "event_server.h"
 #include "job_manager.h"
+#include "config.h"
 #include <stdlib.h>
 
-int main(int argc, char **argv) {
-    int port = atoi(argv[1]);
-    JobManager_create(10);
-    printf("Listening on port %d\n", port);
-    EventServer* s = EventServer_create(port);
+Config *config;
+
+int main() {
+    config = Config_create();
+    JobManager_create(config->queue_size);
+    printf("Listening on port %s:%d\n", config->interface, config->port);
+    EventServer* s = EventServer_create(config->interface, config->port);
     EventServer_run(s);
     JobManager_destroy();
     return 0;

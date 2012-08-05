@@ -1,4 +1,5 @@
 #include "job_manager.h"
+#include "config.h"
 #include "report_handler.h"
 #include "die.h"
 #include <stdio.h>
@@ -11,7 +12,7 @@ JobManager * manager;
 extern struct event_base *event_base;
 
 static void JobManager_send_report(Job * job){
-    ReportHandler * r =  ReportHandler_create(3333, "127.0.0.1", Job_to_json(job), event_base);
+    ReportHandler * r =  ReportHandler_create(config->master_port, config->master_host, Job_to_json(job), event_base);
     ReportHandler_send(r);
 }
 

@@ -6,5 +6,5 @@ typedef struct {
     struct sockaddr_in sin;
 } EventServer;
 
-EventServer * EventServer_create(int port);
+EventServer * EventServer_create(char *interface, int port);
 void EventServer_run(EventServer *server);

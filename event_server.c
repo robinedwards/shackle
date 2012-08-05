@@ -64,7 +64,7 @@ static void EventServer_accept_error_callback(struct evconnlistener *listener, v
     event_base_loopexit(event_base, NULL);
 }
 
-EventServer * EventServer_create(int port) {
+EventServer * EventServer_create(char * interface, int port) {
     assert(port > 0 && port < 65537);
     EventServer * server = malloc(sizeof(EventServer));
     assert(server != NULL);
@@ -76,8 +76,8 @@ EventServer * EventServer_create(int port) {
         return NULL;
 
     memset(&(server->sin), 0, sizeof(struct sockaddr_in));
-    server->sin.sin_family = AF_INET; // INET address
-    server->sin.sin_addr.s_addr = 0; // listen on 0.0.0.0
+    server->sin.sin_family = AF_INET;
+    server->sin.sin_addr.s_addr = inet_addr(interface);
     server->sin.sin_port = htons(server->port);
 
     server->listener = evconnlistener_new_bind(event_base, EventServer_accept_callback, server,
