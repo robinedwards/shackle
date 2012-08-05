@@ -5,6 +5,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <json/json.h>
 #include "die.h"
 #include "job.h"
 
@@ -181,3 +182,28 @@ int Job_setup_pipes(Job *job) {
     return 1;
 }
 
+char * Job_to_json(Job *job) {
+    json_object * jobj = json_object_new_object();
+    json_object * jcmd = json_object_new_string(job->command);
+    json_object * jpath = json_object_new_string(job->path);
+
+    if (job->stdout_output != NULL) {
+        json_object * jstdout = json_object_new_string(job->stdout_output);
+        if (jstdout != NULL)
+            json_object_object_add(jobj,"stdout", jstdout);
+    }
+
+    if (job->stderr_output != NULL) {
+        json_object * jstderr = json_object_new_string(job->stderr_output);
+        if (jstderr != NULL)
+            json_object_object_add(jobj,"stderr", jstderr);
+    }
+
+    json_object *jid = json_object_new_int(job->id);
+    json_object *jexit_code = json_object_new_int(job->exit_code);
+    json_object_object_add(jobj,"command", jcmd);
+    json_object_object_add(jobj,"path", jpath);
+    json_object_object_add(jobj,"id", jid);
+    json_object_object_add(jobj,"exit_code", jexit_code);
+    return (char *) json_object_to_json_string(jobj);
+}

@@ -1,4 +1,5 @@
 #include "job_manager.h"
+#include "report_handler.h"
 #include "die.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +8,12 @@
 #include <string.h>
 
 JobManager * manager;
+extern struct event_base *event_base;
+
+static void JobManager_send_report(Job * job){
+    ReportHandler * r =  ReportHandler_create(3333, "127.0.0.1", Job_to_json(job), event_base);
+    ReportHandler_send(r);
+}
 
 static int JobManager_remove_job(int pid, int exit_code) {
     for (int i = 0; i < manager->queue_size; i++) {
@@ -16,7 +23,7 @@ static int JobManager_remove_job(int pid, int exit_code) {
             printf("Found child %d in slot %d, job %d complete\n",
                     pid, i, manager->queue[i]->id);
             manager->queue[i]->exit_code = exit_code;
-            Job_print(manager->queue[i]);
+            JobManager_send_report(manager->queue[i]);
             Job_destroy(manager->queue[i]);
             manager->queue[i] = NULL;
             return 1;

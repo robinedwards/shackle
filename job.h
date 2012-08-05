@@ -21,3 +21,4 @@ void Job_setup_child_handler(void);
 void Job_print(Job *job);
 int Job_launch(Job *job);
 int Job_setup_pipes(Job *job);
+char *Job_to_json(Job *job);
