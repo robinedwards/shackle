@@ -200,6 +200,7 @@ char * Job_to_json(Job *job) {
             json_object_object_add(jobj,"stderr", jstderr);
     }
 
+    json_object *type = json_object_new_string("completion");
     json_object *jid = json_object_new_int(job->id);
     json_object *jnodeid = json_object_new_int(config->node_id);
     json_object *jexit_code = json_object_new_int(job->exit_code);
@@ -208,5 +209,6 @@ char * Job_to_json(Job *job) {
     json_object_object_add(jobj,"id", jid);
     json_object_object_add(jobj,"node_id", jnodeid);
     json_object_object_add(jobj,"exit_code", jexit_code);
+    json_object_object_add(jobj,"message_type", type);
     return (char *) json_object_to_json_string(jobj);
 }
