@@ -32,7 +32,6 @@ ReportHandler * ReportHandler_create(int port, char *host, char *content, struct
 void ReportHandler_destroy(ReportHandler *r) {
     assert(r != NULL);
     // free(r->content);
-    // free(r->content);
     free(r);
 }
 
@@ -47,7 +46,7 @@ static void ReportHandler_callback(struct bufferevent *bev, short events,  void 
     if (events & BEV_EVENT_CONNECTED) {
         bufferevent_write(bev, r->content, sizeof(char) * strlen(r->content));
     } else if (events & BEV_EVENT_ERROR)
-        die("Error connecting to master (cb)");
+        printf("WARNING failed connecting to master, job not reported (cb)\n");
 }
 
 int ReportHandler_send(ReportHandler * report) {
@@ -55,7 +54,7 @@ int ReportHandler_send(ReportHandler * report) {
 
     bufferevent_setcb(bev, NULL, ReportHandler_write_callback, ReportHandler_callback, report);
     if(bufferevent_socket_connect(bev, (struct sockaddr *) &(report->addr), sizeof(report->addr)) < 0)
-        die("Couldn't connect to master");
+        printf("WARNING failed to connect to master, job not reported\n");
 
     return 0;
 }
