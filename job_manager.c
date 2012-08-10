@@ -5,8 +5,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <signal.h>
 #include <string.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <sys/wait.h>
+
 
 JobManager * manager;
 extern struct event_base *event_base;
@@ -61,7 +64,7 @@ void JobManager_create(int size) {
 
     // setup child handlers
     struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
+    memset(&sa, 0, sizeof(struct sigaction));
     sa.sa_handler = JobManager_child_exit_handler;
     sigaction(SIGCHLD, &sa, NULL);
 }
