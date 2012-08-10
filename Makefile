@@ -1,4 +1,4 @@
-CFLAGS=-c -Wextra -Wall -ggdb3 -std=c99
+CFLAGS=-c -Wextra -Wall -ggdb3 -std=gnu99
 CC=gcc
 LDFLAGS=-levent -ljson
 SOURCES=die.c config.c event_server.c message_handler.c job_manager.c job.c report_handler.c main.c
