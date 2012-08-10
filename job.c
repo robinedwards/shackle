@@ -96,10 +96,7 @@ int Job_launch(Job *job) {
         printf("Child executing '%s'\n", job->command);
         int r = execv(job->path, job->argv);
         if (r == -1)
-            perror("Executing command");
-        else
-            printf("Child finished with code %d\n", r);
-        exit(r);
+            die("Executing command");
     }
     else if (pid > 0) { // parent
         job->pid = pid;
@@ -116,6 +113,7 @@ int Job_launch(Job *job) {
         perror("Unable to fork!!");
         return 0;
     }
+    return 1;
 }
 
 static void Job_grow_and_append(char **p, char *data, int size) {
@@ -138,8 +136,10 @@ static void Job_read_stdout_pipe(int fd, short flags, void *data) {
 
     char buf[1024];
     int ret = read(fd, buf, 1024);
-    if (ret == -1)
-        perror("Couldn't read stdout pipe");
+    if (ret == -1) {
+        close(fd);
+       // perror("Couldn't read stdout pipe");
+    }
     else if (ret > 0) {
         buf[ret] = 0;
         Job_grow_and_append(&(job->stdout_output), buf, ret);
@@ -157,7 +157,7 @@ static void Job_read_stderr_pipe(int fd, short flags, void *data) {
     char buf[1024];
     int ret = read(fd, buf, 1024);
     if (ret == -1)
-        perror("Couldn't read stderr pipe");
+        close(fd);
     else if (ret > 0) {
         buf[ret] = 0;
         Job_grow_and_append(&(job->stderr_output), buf, ret);
