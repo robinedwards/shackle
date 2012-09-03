@@ -29,6 +29,7 @@ Job *Job_create(int id, char *command, int time_limit) {
         job->argc++;
         p = strtok(NULL, " ");
     }
+    job->argv[job->argc] = NULL;
 
     job->id = id;
     job->time_limit = time_limit;
