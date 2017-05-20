@@ -88,7 +88,7 @@ int JobManager_add_job(Job *job) {
     for (; i <= manager->queue_size; i++) {
         if (manager->queue[i] == NULL) {
             slot = &(manager->queue[i]);
-            printf("found free slot %d for job %d > %p\n", i, job->id, manager->queue);
+            printf("Found free slot %d for job %d > %p\n", i, job->id, (void *) manager->queue);
             break;
         }
     }
