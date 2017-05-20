@@ -1,0 +1,28 @@
+BUILDING
+--------
+$ sudo apt-get install build-essential libjson0 libjson0-dev libevent-dev
+$ make
+
+CONFIG
+------
+See config.env
+
+RUNNING
+-------
+$ source config.env
+$ ./shackle
+
+TESTING
+-------
+Setup a fake master server to listen to the reports from:
+
+$ nc -l -p 19861
+
+Send a command to shackle:
+
+$ echo "/bin/uname -a" | nc localhost 16891
+
+TODO
+----
+1. address todos in code
+2. use json for sending commands
