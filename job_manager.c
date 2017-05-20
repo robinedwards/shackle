@@ -43,7 +43,7 @@ static void JobManager_child_exit_handler(int sig) {
     int status;
 
     while ((p=waitpid(-1, &status, WNOHANG)) > 0) {
-        printf("pid %d just exited with status %d\n", p, status);
+        printf("pid %d just exited with status %d signal %d\n", p, status, sig);
         if (!JobManager_remove_job(p, status)) {
             printf("Couldn't find corresponding job in the queue?\n");
         }

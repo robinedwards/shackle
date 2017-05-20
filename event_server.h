@@ -7,4 +7,4 @@ typedef struct {
 } EventServer;
 
 EventServer * EventServer_create(char *interface, int port);
-void EventServer_run(EventServer *server);
+void EventServer_run();

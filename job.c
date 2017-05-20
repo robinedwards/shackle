@@ -10,6 +10,8 @@
 #include "job.h"
 #include "config.h"
 
+#define UNUSED(x) __attribute__((unused)) x
+
 extern struct event_base *event_base;
 
 Job *Job_create(int id, char *command, int time_limit) {
@@ -131,7 +133,7 @@ static void Job_grow_and_append(char **p, char *data, int size) {
     *p = strcat(*p, data);
 }
 
-static void Job_read_stdout_pipe(int fd, short flags, void *data) {
+static void Job_read_stdout_pipe(int fd, short UNUSED(flags), void *data) {
     assert(data != NULL);
     Job * job = data;
 
@@ -151,7 +153,7 @@ static void Job_read_stdout_pipe(int fd, short flags, void *data) {
         close(fd);
 }
 
-static void Job_read_stderr_pipe(int fd, short flags, void *data) {
+static void Job_read_stderr_pipe(int fd, short UNUSED(flags), void *data) {
     assert(data != NULL);
     Job * job = data;
 

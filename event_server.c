@@ -14,15 +14,17 @@
 #include "die.h"
 #include "message_handler.h"
 
+#define UNUSED(x) __attribute__((unused)) x
+
 
 struct event_base *event_base;
 
 
-static void EventServer_write_callback(struct bufferevent *bev, void *arg) {
+static void EventServer_write_callback(struct bufferevent *bev, void UNUSED(*arg)) {
     bufferevent_free(bev);
 }
 
-static void EventServer_error_callback(struct bufferevent *bev, short error, void *ctx) {
+static void EventServer_error_callback(struct bufferevent *bev, short error, void UNUSED(*ctx)) {
     if (error & BEV_EVENT_ERROR) {
         die("An error occured %dn", error);
     } else if (error & BEV_EVENT_TIMEOUT) {
@@ -48,8 +50,9 @@ static void EventServer_read_callback(struct bufferevent *bev, void *arg) {
     }
 }
 
+static void EventServer_accept_callback(
+        struct evconnlistener UNUSED(*listener), evutil_socket_t fd, struct sockaddr UNUSED(*address), int UNUSED(socklen), void *ctx) {
 
-static void EventServer_accept_callback(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *address, int socklen, void *ctx) {
     EventServer * server = ctx;
     struct bufferevent *bev = bufferevent_socket_new(event_base, fd, BEV_OPT_CLOSE_ON_FREE);
     bufferevent_setwatermark(bev, EV_WRITE, 1, 9999);
@@ -57,7 +60,7 @@ static void EventServer_accept_callback(struct evconnlistener *listener, evutil_
     bufferevent_enable(bev, EV_READ|EV_WRITE);
 }
 
-static void EventServer_accept_error_callback(struct evconnlistener *listener, void *ctx) {
+static void EventServer_accept_error_callback(struct evconnlistener UNUSED(*listener), void UNUSED(*ctx)) {
     int err = EVUTIL_SOCKET_ERROR();
     fprintf(stderr, "Got an error %d (%s) on the listener. "
             "Shutting down.\n", err, evutil_socket_error_to_string(err));
@@ -89,7 +92,7 @@ EventServer * EventServer_create(char * interface, int port) {
     return server;
 }
 
-void EventServer_run(EventServer *server) {
+void EventServer_run() {
     event_base_dispatch(event_base);
 }
 
